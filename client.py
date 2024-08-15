@@ -5,10 +5,9 @@ import urllib.parse
 from decimal import Decimal
 
 import requests
-from Crypto.Hash import SHA256
-from Crypto.PublicKey import RSA
-from Crypto.Signature import pkcs1_15
-
+from cryptography.hazmat.primitives.serialization import load_pem_private_key
+from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
+from cryptography.hazmat.primitives.hashes import SHA256
 from validators import phone_is_valid, length_is_valid
 
 
@@ -477,9 +476,11 @@ class OrangeDataClient(object):
             raise OrangeDataClientValidationError('String name + value is too long')
 
     def __sign(self, data):
-        key = RSA.import_key(open(self.__sign_private_key).read())
-        h = SHA256.new(json.dumps(data).encode())
-        signature = pkcs1_15.new(key).sign(h)
+        key = load_pem_private_key(
+            open(self.__sign_private_key).read().encode(),
+            password=None
+        )
+        signature = key.sign(json.dumps(data).encode(), PKCS1v15(), SHA256())
         return base64.b64encode(signature).decode()
 
     def send_order(self):
